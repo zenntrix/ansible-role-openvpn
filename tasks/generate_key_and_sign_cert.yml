@@ -1,0 +1,74 @@
+---
+- name: generate {{ crt_name }} key and csr
+  command: openssl req -nodes -newkey rsa:{{ crt_rsa_bits }} -keyout {{ crt_name }}.key -out {{ crt_name }}.csr -days 3650 -subj /CN={{ crt_cn }}/
+  args:
+    chdir: "{{ crt_dir }}"
+    creates: "{{ crt_name }}.key"
+  register: _key
+
+- name: protect {{ crt_name }} key
+  file:
+    path: "{{ crt_dir }}/{{ crt_name }}.key"
+    mode: 0400
+
+- name: Check if {{ crt_name }} crt exists
+  stat:
+      path: "{{ crt_dir }}/{{ crt_name }}.crt"
+  register: _stat_crt
+
+- name: Check if {{ crt_name }} crt needs renewing
+  command: >-
+    openssl x509 -in {{ crt_name }}.crt -noout --checkend 2592000
+  args:
+    chdir: "{{ crt_dir }}"
+  register: _validate_crt
+  when: _stat_crt.stat.exists == True
+
+- name: sign {{ crt_name }} csr
+  command: >-
+    openssl x509 
+      -req 
+      -in {{ crt_name }}.csr 
+      -out {{ crt_name }}.crt 
+      {% if crt_ca is defined %}-CA {{ crt_ca }}{% endif %}
+      {% if crt_ca is defined %}-CAkey {{ crt_ca_key }}{% endif %}
+      {% if crt_selfsign %}-signkey {{ crt_name }}.key{% endif %}
+      -sha256 
+      -days 3650 
+      -CAcreateserial 
+      -extfile openssl-server.ext
+      {% if crt_ca_passphrase %}-passin 'pass:{{ crt_ca_passphrase }}'{% endif %}
+  no_log: "{{ crt_ca_passphrase }}"
+  args:
+    chdir: "{{ crt_dir }}"
+    creates: "{{ crt_name }}.crt"
+  when: not crt_external_sign_handler and
+        (_key.changed or
+        _stat_crt.stat.exists == False or
+        _validate_crt.rc == 1)
+
+- name: Sign {{ crt_name }} CSR externally
+  block:
+    - name: register csr
+      slurp:
+        src: "{{ crt_dir }}/{{ crt_name }}.csr"
+      register: _csr
+
+    - set_fact:
+        server_csr: "{{ _csr.content | b64decode }}"
+
+    - name: call out to sign csr
+      command: /bin/true
+      notify: "{{ crt_external_sign_handler }}"
+
+    - meta: flush_handlers
+
+    - name: copy signed crt
+      copy:
+        content: "{{ server_crt | mandatory }}"
+        dest: "{{ crt_dir }}/{{ crt_name }}.crt"
+        mode: 0400
+  when: crt_external_sign_handler and 
+        (_key.changed or
+        _stat_crt.stat.exists == False or
+        _validate_crt.rc == 1)
