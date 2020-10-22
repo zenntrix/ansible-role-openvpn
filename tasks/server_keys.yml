@@ -19,7 +19,9 @@
     content: "{{openvpn_ca_key.key}}"
     dest: "{{openvpn_key_dir}}/ca-key.pem"
     mode: 0400
-  when: openvpn_ca_key is defined
+  when: 
+    - openvpn_ca_key is defined
+    - openvpn_ca_key.key is defined
 
 - name: Copy CA cert
   copy:
@@ -36,8 +38,8 @@
     crt_dir: "{{openvpn_key_dir}}"
     crt_name: ca
     crt_ca_passphrase: False
-    crt_external_sign_handler: "{{ openvpn_sign_ca_csr_handler | default(False) }}"
-    crt_selfsign: "{% if crt_external_sign_handler %}False{% else %}True{% endif %}"
+    crt_external_sign_handler: False
+    crt_selfsign: True
   when: openvpn_ca_key is not defined
 
 - name: Generate Server (cert & key)
