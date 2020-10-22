@@ -20,7 +20,7 @@
 - debug: msg={{ additional_certs_to_add }}
 
 - name: generate client key
-  import_tasks: "{{ role_path }}/tasks/generate_key_and_sign_cert.yml"
+  include_tasks: "{{ role_path }}/tasks/generate_key_and_sign_cert.yml"
   vars:
     crt_rsa_bits: "{{openvpn_rsa_bits}}"
     crt_cn: "{{ item }}"
