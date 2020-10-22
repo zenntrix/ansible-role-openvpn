@@ -19,20 +19,6 @@
 
 - debug: msg={{ additional_certs_to_add }}
 
-
-- name: Generate CA (cert & key)
-  
-  vars:
-    crt_rsa_bits: "{{openvpn_rsa_bits}}"
-    crt_cn: "{{openvpn_ca_cn}}"
-    crt_dir: "{{openvpn_key_dir}}"
-    crt_name: ca
-    crt_ca_passphrase: False
-    crt_external_sign_handler: "{{ openvpn_sign_ca_csr_handler | default(False) }}"
-    crt_selfsign: "{% if crt_external_sign_handler %}False{% else %}True{% endif %}"
-  when: openvpn_ca_key is not defined
-
-
 - name: generate client key
   import_tasks: "{{ role_path }}/tasks/generate_key_and_sign_cert.yml"
   vars:
