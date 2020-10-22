@@ -20,7 +20,7 @@
     dest: "{{openvpn_key_dir}}/ca-key.pem"
     mode: 0400
   when: openvpn_ca_key is defined
-  
+
 - name: Copy CA cert
   copy:
     content: "{{openvpn_ca_key.crt}}"

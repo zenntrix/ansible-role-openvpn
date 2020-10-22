@@ -55,7 +55,8 @@
       register: _csr
 
     - set_fact:
-        server_csr: "{{ _csr.content | b64decode }}"
+        csr_to_sign: "{{ _csr.content | b64decode }}"
+        csr_cn_to_sign: "{{ crt_cn }}"
 
     - name: call out to sign csr
       command: /bin/true
@@ -65,7 +66,7 @@
 
     - name: copy signed crt
       copy:
-        content: "{{ server_crt | mandatory }}"
+        content: "{{ signed_crt | mandatory }}"
         dest: "{{ crt_dir }}/{{ crt_name }}.crt"
         mode: 0400
   when: crt_external_sign_handler and 
